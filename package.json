@@ -14,9 +14,19 @@
     "@mui/icons-material": "^5.8.4",
     "@mui/lab": "^5.0.0-alpha.92",
     "@mui/material": "^5.9.1",
+    "@trpc/client": "^9.26.2",
+    "@trpc/next": "^9.26.2",
+    "@trpc/react": "^9.26.2",
+    "@trpc/server": "^9.26.2",
+    "axios": "^0.27.2",
+    "crypto-random-string": "^5.0.0",
     "next": "12.2.3",
+    "query-string": "^7.1.1",
     "react": "18.2.0",
-    "react-dom": "18.2.0"
+    "react-dom": "18.2.0",
+    "react-query": "3",
+    "redis": "^4.2.0",
+    "zod": "^3.17.10"
   },
   "devDependencies": {
     "@types/node": "18.6.1",

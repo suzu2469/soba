@@ -4,6 +4,9 @@ import Box from '@mui/material/Box'
 import Image from '../../../components/Image'
 
 type Props = {
+    image?: string
+    artist?: string
+    title?: string
     className?: string
 }
 const Track: React.FC<Props> = (props) => {
@@ -16,21 +19,15 @@ const Track: React.FC<Props> = (props) => {
             height="48px"
         >
             <Box display="flex" alignItems="center">
-                <Image
-                    width="48px"
-                    src="https://www.lyrical-nonsense.com/wp-content/uploads/2022/07/Porter-Robinson-Everything-Goes-On.jpg"
-                    alt=""
-                />
+                <Image width="48px" src={props.image} alt="" />
                 <Box
                     display="flex"
                     marginLeft="24px"
                     justifyContent="center"
                     flexDirection="column"
                 >
-                    <TrackTitle>Everythings Goes On</TrackTitle>
-                    <TrackArtist>
-                        League of Legends & Porter Robinson
-                    </TrackArtist>
+                    <TrackTitle>{props.title}</TrackTitle>
+                    <TrackArtist>{props.artist}</TrackArtist>
                 </Box>
             </Box>
             <Box>

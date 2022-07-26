@@ -1,9 +1,12 @@
+import Head from 'next/head'
+import { ThemeProvider } from '@mui/material/styles'
+import { withTRPC } from '@trpc/next'
+import { AppRouter } from './api/trpc/[trpc]'
+
 import '../styles/reset.css'
 import '../styles/globals.css'
 import type { AppProps } from 'next/app'
 import { theme } from '../styles/theme'
-import { ThemeProvider } from '@mui/material/styles'
-import Head from 'next/head'
 
 function MyApp({ Component, pageProps }: AppProps) {
     return (
@@ -23,4 +26,15 @@ function MyApp({ Component, pageProps }: AppProps) {
     )
 }
 
-export default MyApp
+export default withTRPC<AppRouter>({
+    config({ ctx }) {
+        const url = process.env.VERCEL_URL
+            ? `https://${process.env.VERCEL_URL}/api/trpc`
+            : 'http://localhost:3000/api/trpc'
+
+        return {
+            url,
+        }
+    },
+    ssr: false,
+})(MyApp)

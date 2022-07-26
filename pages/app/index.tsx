@@ -1,6 +1,7 @@
 import { NextPage } from 'next'
 import { useState } from 'react'
 import styled from '@emotion/styled'
+import { trpc } from '../../utils/trpc'
 
 import Container from '@mui/material/Container'
 import Box from '@mui/material/Box'
@@ -10,7 +11,13 @@ import CachedIcon from '@mui/icons-material/Cached'
 import TrackList from '../../components/TrackList'
 
 const AppHome: NextPage = () => {
-    const [clicked, setClicked] = useState(false)
+    const utils = trpc.useContext()
+    const [loading, setLoading] = useState(false)
+
+    const clickRefetchButton = () => {
+        setLoading(true)
+        utils.invalidateQueries(['me.tracks']).then(() => setLoading(false))
+    }
 
     return (
         <Container maxWidth="sm">
@@ -20,9 +27,9 @@ const AppHome: NextPage = () => {
                     <LoadingButton
                         startIcon={<CachedIcon />}
                         variant="contained"
-                        loading={clicked}
+                        loading={loading}
                         loadingPosition="start"
-                        onClick={() => setClicked(true)}
+                        onClick={clickRefetchButton}
                     >
                         Refresh
                     </LoadingButton>
