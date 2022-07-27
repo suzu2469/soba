@@ -7,6 +7,8 @@ import * as crypto from 'crypto'
 import axios, { AxiosResponse } from 'axios'
 import { z } from 'zod'
 
+import addSeconds from 'date-fns/addSeconds'
+import formatRFC7231 from 'date-fns/formatRFC7231'
 import range from 'lodash/range'
 
 const createContext = async ({
@@ -21,6 +23,7 @@ const createContext = async ({
     await redis.connect()
 
     return {
+        accessToken: null,
         redis,
         req,
         res,
@@ -30,6 +33,16 @@ type Context = trpc.inferAsyncReturnType<typeof createContext>
 
 const createSpotifyAuthToken = (clientId: string, clientSecret: string) =>
     Buffer.from(`${clientId}:${clientSecret}`).toString('base64')
+
+const accessTokenCookieKey = 'access_token'
+const accessTokenCookie = (token: string, expires: number) =>
+    `${accessTokenCookieKey}=${token}; Path=/; SameSite=Strict; Expires=${formatRFC7231(
+        addSeconds(new Date(), expires),
+    )}; HttpOnly`
+
+const refreshTokenCookieKey = 'refresh_token'
+const refreshTokenCookie = (token: string) =>
+    `${refreshTokenCookieKey}=${token}; Path=/; SameSite=Strict; HttpOnly`
 
 const getUsersSavedTracks = async (
     accessToken: string,
@@ -109,6 +122,120 @@ const getUsersSavedTracks = async (
         }),
     }
 }
+
+const protectedRouter = trpc
+    .router<Context>()
+    .middleware(async ({ ctx, next }) => {
+        const accessToken = ctx.req.cookies[accessTokenCookieKey]
+        if (!accessToken) {
+            const refreshToken = ctx.req.cookies[refreshTokenCookieKey]
+            if (!refreshToken) {
+                throw new trpc.TRPCError({
+                    code: 'UNAUTHORIZED',
+                    message: 'AccessToken is not found',
+                })
+            }
+
+            type SpotifyRefreshTokenResponse = {
+                access_token: string
+                token_type: string
+                scope: string
+                expires_in: number
+            }
+            let res: AxiosResponse<SpotifyRefreshTokenResponse>
+            try {
+                const params = new URLSearchParams({
+                    grant_type: 'refresh_token',
+                    refresh_token: refreshToken,
+                    client_id: process.env.SPOTIFY_CLIENT_ID ?? '',
+                })
+                res = await axios.post<SpotifyRefreshTokenResponse>(
+                    `https://accounts.spotify.com/api/token`,
+                    params,
+                    {
+                        headers: {
+                            Authorization: `Basic ${createSpotifyAuthToken(
+                                process.env.SPOTIFY_CLIENT_ID ?? '',
+                                process.env.SPOTIFY_CLIENT_SECRET ?? '',
+                            )}`,
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                    },
+                )
+            } catch (e) {
+                console.error(e)
+                ctx.res.setHeader(
+                    'Set-Cookie',
+                    `${refreshTokenCookieKey}=deleted; Path=/; Expires=${new Date().toUTCString()}`,
+                )
+                throw new trpc.TRPCError({
+                    code: 'UNAUTHORIZED',
+                    message: 'Token refresh failed',
+                })
+            }
+
+            ctx.res.setHeader(
+                'Set-Cookie',
+                accessTokenCookie(res.data.access_token, res.data.expires_in),
+            )
+
+            return next({ ctx: { ...ctx, accessToken: res.data.access_token } })
+        }
+
+        return next({ ctx: { ...ctx, accessToken } })
+    })
+    .query('tracks', {
+        input: z.object({
+            cursor: z.number().nullish(),
+        }),
+        resolve: async ({ ctx, input }) => {
+            const cursor: number = input.cursor ?? 1
+            const limit = 50
+
+            const res = await getUsersSavedTracks(
+                ctx.accessToken,
+                cursor,
+                limit,
+            )
+
+            return {
+                items: res.items,
+                nextCursor: res.total > limit ? cursor + limit : null,
+            }
+        },
+    })
+    .mutation('bpm_search', {
+        input: z.object({
+            bpmStart: z.number().min(1).max(999),
+            bpmEnd: z.number().min(1).max(999),
+        }),
+        resolve: async ({ ctx, input }) => {
+            const limit = 50
+
+            const firstRes = await getUsersSavedTracks(
+                ctx.accessToken,
+                1,
+                limit,
+            )
+            const requestsCount = Math.ceil(firstRes.total / limit)
+            const requests = await Promise.all(
+                range(1, requestsCount).map((requestCount) =>
+                    getUsersSavedTracks(
+                        ctx.accessToken,
+                        (requestCount - 1) * limit + 1,
+                        limit,
+                    ),
+                ),
+            )
+
+            return requests
+                .flatMap((res) => res.items)
+                .filter(
+                    (item) =>
+                        input.bpmStart <= item.bpm && item.bpm <= input.bpmEnd,
+                )
+        },
+    })
 
 type SessionData = {
     state: string
@@ -233,72 +360,16 @@ export const appRouter = trpc
                 await ctx.redis.del(sessionId)
             }
 
+            console.log({ expires: res.data.expires_in })
             ctx.res.setHeader('Set-Cookie', [
-                `access_token=${res.data.access_token}; Path=/; SameSite=Strict; HttpOnly`,
-                `refresh_token=${res.data.refresh_token}; Path=/; SameSite=Strict; HttpOnly`,
+                accessTokenCookie(res.data.access_token, res.data.expires_in),
+                refreshTokenCookie(res.data.refresh_token),
             ])
 
             return
         },
     })
-    .query('me.tracks', {
-        input: z.object({
-            cursor: z.number().nullish(),
-        }),
-        resolve: async ({ ctx, input }) => {
-            const cursor: number = input.cursor ?? 1
-            const limit = 50
-            const accessToken = ctx.req.cookies['access_token']
-            if (!accessToken) {
-                throw new trpc.TRPCError({
-                    code: 'UNAUTHORIZED',
-                    message: 'AccessToken is not found',
-                })
-            }
-
-            const res = await getUsersSavedTracks(accessToken, cursor, limit)
-
-            return {
-                items: res.items,
-                nextCursor: res.total > limit ? cursor + limit : null,
-            }
-        },
-    })
-    .mutation('me.bpm_search', {
-        input: z.object({
-            bpmStart: z.number().min(1).max(999),
-            bpmEnd: z.number().min(1).max(999),
-        }),
-        resolve: async ({ ctx, input }) => {
-            const limit = 50
-            const accessToken = ctx.req.cookies['access_token']
-            if (!accessToken) {
-                throw new trpc.TRPCError({
-                    code: 'UNAUTHORIZED',
-                    message: 'AccessToken is not found',
-                })
-            }
-
-            const firstRes = await getUsersSavedTracks(accessToken, 1, limit)
-            const requestsCount = Math.ceil(firstRes.total / limit)
-            const requests = await Promise.all(
-                range(1, requestsCount).map((requestCount) =>
-                    getUsersSavedTracks(
-                        accessToken,
-                        (requestCount - 1) * limit + 1,
-                        limit,
-                    ),
-                ),
-            )
-
-            return requests
-                .flatMap((res) => res.items)
-                .filter(
-                    (item) =>
-                        input.bpmStart <= item.bpm && item.bpm <= input.bpmEnd,
-                )
-        },
-    })
+    .merge('me.', protectedRouter)
 
 export type AppRouter = typeof appRouter
 
