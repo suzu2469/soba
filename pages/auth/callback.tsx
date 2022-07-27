@@ -1,44 +1,23 @@
 import type { NextPage } from 'next'
 import { useRouter } from 'next/router'
-import { useEffect, useMemo } from 'react'
 import { trpc } from '../../utils/trpc'
 
-const Callback: NextPage = () => {
+type Props = {
+    code: string
+    state: string
+}
+const Callback: NextPage<Props> = (props) => {
     const router = useRouter()
-    const queryCode = router.query['code']
-    const queryState = router.query['state']
-    const error = router.query['error']
-
-    const code = useMemo(() => {
-        if (!queryCode) {
-            return ''
-        }
-        if (typeof queryCode === 'string') {
-            return queryCode
-        }
-
-        return queryCode[0]
-    }, [queryCode])
-
-    const state = useMemo(() => {
-        if (!queryState) {
-            return ''
-        }
-        if (typeof queryState === 'string') {
-            return queryState
-        }
-        return queryState[0]
-    }, [queryState])
 
     const query = trpc.useQuery([
         'auth.callback',
         {
-            code,
-            state,
+            code: props.code,
+            state: props.state,
         },
     ])
 
-    if (error || !code || !state || query.isError) {
+    if (query.isError) {
         router.push('/auth/fail')
     }
 
@@ -47,6 +26,31 @@ const Callback: NextPage = () => {
     }
 
     return <></>
+}
+
+Callback.getInitialProps = async ({ query, res }) => {
+    const stringOrHead = (
+        x: string | string[] | undefined,
+    ): string | undefined =>
+        x ? (typeof x === 'string' ? x : x[0]) : undefined
+
+    const code = stringOrHead(query['code'])
+    const state = stringOrHead(query['state'])
+    const error = stringOrHead(query['error'])
+
+    if (error || !state || !code) {
+        res?.writeHead(302, { location: '/auth/fail' })
+        res?.end()
+        return {
+            state: '',
+            code: '',
+        }
+    }
+
+    return {
+        state,
+        code,
+    }
 }
 
 export default Callback
