@@ -61,6 +61,7 @@ const getUsersSavedTracks = async (
             } as SpotifyGetUsersSavedTracksRequest,
         })
     } catch (e) {
+        console.error({ e })
         throw new trpc.TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
             message: 'Spotify request failed',
@@ -84,6 +85,7 @@ const getUsersSavedTracks = async (
                 {},
             ) ?? {}
     } catch (e) {
+        console.error({ e })
         throw new trpc.TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
             message: 'Spotify request failed',
@@ -266,11 +268,9 @@ export const appRouter = trpc
         input: z.object({
             bpmStart: z.number().min(1).max(999),
             bpmEnd: z.number().min(1).max(999),
-            cursor: z.number().min(1).nullish(),
         }),
         resolve: async ({ ctx, input }) => {
             const limit = 50
-            const cursor: number = input.cursor ?? 1
             const accessToken = ctx.req.cookies['access_token']
             if (!accessToken) {
                 throw new trpc.TRPCError({
@@ -279,17 +279,13 @@ export const appRouter = trpc
                 })
             }
 
-            const firstRes = await getUsersSavedTracks(
-                accessToken,
-                cursor,
-                limit,
-            )
+            const firstRes = await getUsersSavedTracks(accessToken, 1, limit)
             const requestsCount = Math.ceil(firstRes.total / limit)
             const requests = await Promise.all(
                 range(1, requestsCount).map((requestCount) =>
                     getUsersSavedTracks(
                         accessToken,
-                        (requestCount - 1) * limit,
+                        (requestCount - 1) * limit + 1,
                         limit,
                     ),
                 ),
