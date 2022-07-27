@@ -3,6 +3,7 @@ import { useRouter } from 'next/router'
 
 import Container from '@mui/material/Container'
 import LoadingButton from '@mui/lab/LoadingButton'
+import Box from '@mui/material/Box'
 
 import { trpc } from '../utils/trpc'
 
@@ -16,13 +17,20 @@ const Home: NextPage = () => {
 
     return (
         <Container maxWidth="sm">
-            <LoadingButton
-                onClick={() => loginUrlMutation.mutate()}
-                loading={loginUrlMutation.isLoading}
-                variant="contained"
+            <Box
+                display="flex"
+                justifyContent="center"
+                alignItems="center"
+                height="100vh"
             >
-                ログイン
-            </LoadingButton>
+                <LoadingButton
+                    onClick={() => loginUrlMutation.mutate()}
+                    loading={loginUrlMutation.isLoading}
+                    variant="contained"
+                >
+                    ログイン
+                </LoadingButton>
+            </Box>
         </Container>
     )
 }
