@@ -7,6 +7,7 @@ type Props = {
     image?: string
     artist?: string
     title?: string
+    bpm?: number
     className?: string
 }
 const Track: React.FC<Props> = (props) => {
@@ -32,7 +33,7 @@ const Track: React.FC<Props> = (props) => {
             </Box>
             <Box>
                 <Box marginLeft="24px">
-                    <TrackBPM>160</TrackBPM>
+                    <TrackBPM>{Math.round(props.bpm ?? 0)}</TrackBPM>
                 </Box>
             </Box>
         </Box>

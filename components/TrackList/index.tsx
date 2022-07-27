@@ -7,20 +7,21 @@ type Props = {
     className?: string
 }
 const TrackList: React.FC<Props> = (props) => {
-    const query = trpc.useQuery(['me.tracks'], { retry: false })
+    const query = trpc.useInfiniteQuery(['me.tracks', {}])
 
     return (
         <div className={props.className}>
-            {query.data?.items?.map((item) => (
-                <TrackItem
-                    key={item?.track?.id}
-                    title={item?.track?.name}
-                    image={item?.track?.album?.images[0]?.url}
-                    artist={item?.track?.artists
-                        ?.map((artist) => artist?.name)
-                        .join(' & ')}
-                />
-            ))}
+            {query.data?.pages.map((page) =>
+                page?.items?.map((item) => (
+                    <TrackItem
+                        key={item.id}
+                        title={item.title}
+                        image={item.image}
+                        artist={item.artist}
+                        bpm={item.bpm}
+                    />
+                )),
+            )}
         </div>
     )
 }

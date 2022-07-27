@@ -7,6 +7,8 @@ import * as crypto from 'crypto'
 import axios, { AxiosResponse } from 'axios'
 import { z } from 'zod'
 
+import range from 'lodash/range'
+
 const createContext = async ({
     req,
     res,
@@ -29,6 +31,83 @@ type Context = trpc.inferAsyncReturnType<typeof createContext>
 const createSpotifyAuthToken = (clientId: string, clientSecret: string) =>
     Buffer.from(`${clientId}:${clientSecret}`).toString('base64')
 
+const getUsersSavedTracks = async (
+    accessToken: string,
+    cursor: number,
+    limit: number,
+) => {
+    type SpotifyGetUsersSavedTracksResponse = {
+        items: any[]
+        limit: number
+        offset: number
+        next: string
+        previous: string
+        total: number
+    }
+    type SpotifyGetUsersSavedTracksRequest = {
+        limit: number
+        offset: number
+    }
+    let res: AxiosResponse<SpotifyGetUsersSavedTracksResponse>
+
+    try {
+        res = await axios.get(`https://api.spotify.com/v1/me/tracks`, {
+            headers: {
+                Authorization: `Bearer ${accessToken}`,
+            },
+            params: {
+                limit: limit,
+                offset: cursor - 1,
+            } as SpotifyGetUsersSavedTracksRequest,
+        })
+    } catch (e) {
+        throw new trpc.TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'Spotify request failed',
+            cause: e,
+        })
+    }
+
+    const trackIDs = res.data.items.map((item) => item?.track?.id)
+    let bpms: Record<string, number>
+    try {
+        const audioFeatures = await axios.get(
+            `https://api.spotify.com/v1/audio-features`,
+            {
+                params: { ids: trackIDs.join(',') },
+                headers: { Authorization: `Bearer ${accessToken}` },
+            },
+        )
+        bpms =
+            audioFeatures.data?.audio_features?.reduce(
+                (p, c) => ({ ...p, [c?.id ?? '']: c?.tempo ?? 0 }),
+                {},
+            ) ?? {}
+    } catch (e) {
+        throw new trpc.TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'Spotify request failed',
+            cause: e,
+        })
+    }
+
+    return {
+        total: res.data.total,
+        items: res.data.items.map((item) => {
+            return {
+                id: item?.track?.id ?? '',
+                title: item?.track?.name ?? '',
+                image: item?.track?.album?.images[0]?.url ?? '',
+                artist:
+                    item?.track?.artists
+                        ?.map((a) => a?.name ?? '')
+                        .join(' & ') ?? '',
+                bpm: bpms[item?.track?.id ?? ''] ?? 0,
+            }
+        }),
+    }
+}
+
 type SessionData = {
     state: string
     verifier: string
@@ -36,14 +115,6 @@ type SessionData = {
 
 export const appRouter = trpc
     .router<Context>()
-    .query('hello', {
-        input: z.object({ text: z.string().nullish() }),
-        resolve: ({ input }) => {
-            return {
-                greeting: `hello ${input?.text ?? 'world'}`,
-            }
-        },
-    })
     .mutation('auth.login_url', {
         resolve: async ({ ctx }) => {
             const sessionId = crypto.randomUUID()
@@ -151,7 +222,6 @@ export const appRouter = trpc
                     },
                 )
             } catch (e) {
-                console.error(e)
                 throw new trpc.TRPCError({
                     code: 'INTERNAL_SERVER_ERROR',
                     message: 'Request faield to Spotify',
@@ -170,7 +240,12 @@ export const appRouter = trpc
         },
     })
     .query('me.tracks', {
-        resolve: async ({ ctx }) => {
+        input: z.object({
+            cursor: z.number().nullish(),
+        }),
+        resolve: async ({ ctx, input }) => {
+            const cursor: number = input.cursor ?? 1
+            const limit = 50
             const accessToken = ctx.req.cookies['access_token']
             if (!accessToken) {
                 throw new trpc.TRPCError({
@@ -179,40 +254,53 @@ export const appRouter = trpc
                 })
             }
 
-            type SpotifyGetUsersSavedTracksResponse = {
-                items: {}[]
-                limit: number
-                offset: number
-                next: string
-                previous: string
-                total: number
-            }
-            type SpotifyGetUsersSavedTracksRequest = {
-                limit: number
-                offset: number
-            }
-            let res: AxiosResponse<SpotifyGetUsersSavedTracksResponse>
+            const res = await getUsersSavedTracks(accessToken, cursor, limit)
 
-            try {
-                res = await axios.get(`https://api.spotify.com/v1/me/tracks`, {
-                    headers: {
-                        Authorization: `Bearer ${accessToken}`,
-                    },
-                    params: {
-                        limit: 50,
-                        offset: 0,
-                    } as SpotifyGetUsersSavedTracksRequest,
-                })
-            } catch (e) {
-                console.error(e)
+            return {
+                items: res.items,
+                nextCursor: res.total > limit ? cursor + limit : null,
+            }
+        },
+    })
+    .mutation('me.bpm_search', {
+        input: z.object({
+            bpmStart: z.number().min(1).max(999),
+            bpmEnd: z.number().min(1).max(999),
+            cursor: z.number().min(1).nullish(),
+        }),
+        resolve: async ({ ctx, input }) => {
+            const limit = 50
+            const cursor: number = input.cursor ?? 1
+            const accessToken = ctx.req.cookies['access_token']
+            if (!accessToken) {
                 throw new trpc.TRPCError({
-                    code: 'INTERNAL_SERVER_ERROR',
-                    message: 'Spotify request failed',
-                    cause: e,
+                    code: 'UNAUTHORIZED',
+                    message: 'AccessToken is not found',
                 })
             }
 
-            return res.data
+            const firstRes = await getUsersSavedTracks(
+                accessToken,
+                cursor,
+                limit,
+            )
+            const requestsCount = Math.ceil(firstRes.total / limit)
+            const requests = await Promise.all(
+                range(1, requestsCount).map((requestCount) =>
+                    getUsersSavedTracks(
+                        accessToken,
+                        (requestCount - 1) * limit,
+                        limit,
+                    ),
+                ),
+            )
+
+            return requests
+                .flatMap((res) => res.items)
+                .filter(
+                    (item) =>
+                        input.bpmStart <= item.bpm && item.bpm <= input.bpmEnd,
+                )
         },
     })
 
