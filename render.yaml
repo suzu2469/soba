@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: web
+    env: node
+    region: singapore
+    plan: starter
+    buildCommand: yarn build
+    startCommand: yarn start
+    domains:
+      - soba.suzurin.me
+    envVars:
+      - key: REDIS_HOST
+        fromService:
+          type: redis
+          name: redis
+          property: host
+      - key: REDIS_PORT
+        fromService:
+          type: redis
+          name: redis
+          property: port
+      - key: SPOTIFY_CLIENT_ID
+        sync: false
+      - key: SPOTIFY_CLIENT_SECRET
+        sync: false
+  - type: redis
+    name: redis
+    ipAllowList: []
+    region: singapore
+    plan: free
+    maxmemoryPolicy: volatile-lru
