@@ -368,7 +368,6 @@ export const appRouter = trpc
                 await ctx.redis.del(sessionId)
             }
 
-            console.log({ expires: res.data.expires_in })
             ctx.res.setHeader('Set-Cookie', [
                 accessTokenCookie(res.data.access_token, res.data.expires_in),
                 refreshTokenCookie(res.data.refresh_token),
