@@ -94,7 +94,10 @@ const getUsersSavedTracks = async (
         )
         bpms =
             audioFeatures.data?.audio_features?.reduce(
-                (p, c) => ({ ...p, [c?.id ?? '']: c?.tempo ?? 0 }),
+                (p: any, c: Record<string, number>) => ({
+                    ...p,
+                    [c?.id ?? '']: c?.tempo ?? 0,
+                }),
                 {},
             ) ?? {}
     } catch (e) {
@@ -115,7 +118,7 @@ const getUsersSavedTracks = async (
                 image: item?.track?.album?.images[0]?.url ?? '',
                 artist:
                     item?.track?.artists
-                        ?.map((a) => a?.name ?? '')
+                        ?.map((a: any) => a?.name ?? '')
                         .join(' & ') ?? '',
                 bpm: bpms[item?.track?.id ?? ''] ?? 0,
             }
