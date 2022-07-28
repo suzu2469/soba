@@ -11,6 +11,11 @@ import addSeconds from 'date-fns/addSeconds'
 import formatRFC7231 from 'date-fns/formatRFC7231'
 import range from 'lodash/range'
 
+const host = () =>
+    process.env.NODE_ENV === 'development'
+        ? 'http://localhost:3000'
+        : 'https://soba.suzurin.me'
+
 const createContext = async ({
     req,
     res,
@@ -282,7 +287,7 @@ export const appRouter = trpc
                         response_type: 'code',
                         client_id: process.env.SPOTIFY_CLIENT_ID,
                         scope: 'user-library-read',
-                        redirect_uri: 'http://localhost:3000/auth/callback',
+                        redirect_uri: `${host()}/auth/callback`,
                         state,
                         code_challenge: codeChallenge,
                         code_challenge_method: 'S256',
@@ -326,7 +331,7 @@ export const appRouter = trpc
 
             const formData = new URLSearchParams({
                 code: input.code,
-                redirect_uri: 'http://localhost:3000/auth/callback',
+                redirect_uri: `${host()}/auth/callback`,
                 grant_type: 'authorization_code',
                 client_id: process.env.SPOTIFY_CLIENT_ID ?? '',
                 code_verifier: sessionData.verifier,
