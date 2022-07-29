@@ -14,7 +14,7 @@ import Slider from '@mui/material/Slider'
 import Image from '../Image'
 
 type Props = {}
-const AudioPlayer = memo<Props>(() => {
+const AudioPlayer: React.FC<Props> = () => {
     const audioRef = createRef<HTMLAudioElement>()
     const [playing, setPlaying] = useState(false)
     const [volume, setVolume] = useState(10)
@@ -128,9 +128,9 @@ const AudioPlayer = memo<Props>(() => {
             </Box>
         </Wrap>
     )
-})
+}
 
-export default AudioPlayer
+export default memo(AudioPlayer)
 
 const Wrap = styled(Box)`
     //display: flex;
