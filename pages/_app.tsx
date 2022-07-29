@@ -1,6 +1,7 @@
 import Head from 'next/head'
 import { ThemeProvider } from '@mui/material/styles'
 import { withTRPC } from '@trpc/next'
+import { RecoilRoot } from 'recoil'
 import { AppRouter } from './api/trpc/[trpc]'
 
 import '../styles/reset.css'
@@ -20,7 +21,9 @@ function MyApp({ Component, pageProps }: AppProps) {
                 ></link>
             </Head>
             <ThemeProvider theme={theme}>
-                <Component {...pageProps} />
+                <RecoilRoot>
+                    <Component {...pageProps} />
+                </RecoilRoot>
             </ThemeProvider>
         </>
     )

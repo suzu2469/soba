@@ -11,6 +11,7 @@ import IconButton from '@mui/material/IconButton'
 import CachedIcon from '@mui/icons-material/Cached'
 import ExpandMore from '@mui/icons-material/ExpandMore'
 import FilterListIcon from '@mui/icons-material/FilterList'
+import AudioPlayer from '../../components/AudioPlayer'
 import TrackList from '../../components/TrackList'
 import FilteredTracks from '../../components/TrackList/FilteredTracks'
 import FilterPopup from '../../components/FilterPopup'
@@ -37,6 +38,7 @@ const AppHome: NextPage = () => {
 
     return (
         <Container maxWidth="sm">
+            <AudioPlayer />
             <Box margin="64px 0" paddingBottom="64px">
                 <Typography variant="h1">Your Tracks</Typography>
                 <Box

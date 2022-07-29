@@ -120,6 +120,8 @@ const getUsersSavedTracks = async (
             return {
                 id: item?.track?.id ?? '',
                 title: item?.track?.name ?? '',
+                url: item?.track?.uri ?? '',
+                preview: item?.track?.preview_url ?? '',
                 image: item?.track?.album?.images[0]?.url ?? '',
                 artist:
                     item?.track?.artists
