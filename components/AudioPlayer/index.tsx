@@ -7,6 +7,8 @@ import Box from '@mui/material/Box'
 import PlayArrowIcon from '@mui/icons-material/PlayArrow'
 import PauseIcon from '@mui/icons-material/Pause'
 import VolumeDown from '@mui/icons-material/VolumeDown'
+import VolumeUp from '@mui/icons-material/VolumeUp'
+import VolumeMute from '@mui/icons-material/VolumeMute'
 import Slider from '@mui/material/Slider'
 import Image from '../Image'
 
@@ -85,8 +87,18 @@ const AudioPlayer = memo<Props>(() => {
                 </TrackDetailWrap>
             </Box>
             <VolumeWrap>
-                <VolumeDown />
-                <VolumeSlider value={volume} onChange={volumeChange} />
+                {volume === 0 ? (
+                    <VolumeMute />
+                ) : volume < 50 ? (
+                    <VolumeDown />
+                ) : (
+                    <VolumeUp />
+                )}
+                <VolumeSlider
+                    value={volume}
+                    valueLabelDisplay="auto"
+                    onChange={volumeChange}
+                />
             </VolumeWrap>
         </Wrap>
     )
@@ -177,5 +189,9 @@ const VolumeSlider = styled(Slider)`
         &.Mui-active {
             box-shadow: none;
         }
+    }
+    & .MuiSlider-valueLabel {
+        background-color: black;
+        color: white;
     }
 `
