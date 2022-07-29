@@ -81,7 +81,12 @@ const AudioPlayer = memo<Props>(() => {
                 autoPlay
                 onTimeUpdate={timeUpdate}
             />
-            <Box height="64px">
+            <Box
+                height="64px"
+                display="flex"
+                alignItems="center"
+                justifyContent="space-between"
+            >
                 <Box display="flex" alignItems="center">
                     <ImageWrap>
                         {audioPlayer && (
