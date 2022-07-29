@@ -1,6 +1,8 @@
 import { useCallback, useMemo } from 'react'
+import { useSetRecoilState } from 'recoil'
 import styled from '@emotion/styled'
 import { trpc } from '../../utils/trpc'
+import { audioPlayerState } from '../../recoil/audioPlayer'
 
 import Track from './Track'
 
@@ -9,12 +11,25 @@ type Props = {
 }
 const TrackList: React.FC<Props> = (props) => {
     const query = trpc.useInfiniteQuery(['me.tracks', {}])
+    const setAudioPlayer = useSetRecoilState(audioPlayerState)
 
     const items = useMemo(() => {
         return query.data?.pages.flatMap((page) => page?.items) ?? []
     }, [query.data])
 
-    const clickImage = useCallback((id: string) => {}, [items])
+    const clickImage = useCallback(
+        (id: string) => {
+            const item = items.find((item) => id === item.id)
+            if (!item) return
+            setAudioPlayer({
+                title: item.title,
+                artist: item.artist,
+                imageUrl: item.image,
+                audioUrl: item.preview,
+            })
+        },
+        [items],
+    )
 
     return (
         <div className={props.className}>

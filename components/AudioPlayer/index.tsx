@@ -1,5 +1,7 @@
 import { createRef, memo, useCallback, useEffect, useState } from 'react'
 import styled from '@emotion/styled'
+import { useRecoilValue } from 'recoil'
+import { audioPlayerState } from '../../recoil/audioPlayer'
 
 import Box from '@mui/material/Box'
 import PlayArrowIcon from '@mui/icons-material/PlayArrow'
@@ -13,6 +15,7 @@ const AudioPlayer = memo<Props>(() => {
     const audioRef = createRef<HTMLAudioElement>()
     const [playing, setPlaying] = useState(false)
     const [volume, setVolume] = useState(20)
+    const audioPlayer = useRecoilValue(audioPlayerState)
 
     const volumeChange = useCallback(
         (e: Event, value: number | number[]) => {
@@ -48,25 +51,24 @@ const AudioPlayer = memo<Props>(() => {
 
     return (
         <Wrap>
-            <audio
-                ref={audioRef}
-                src="https://p.scdn.co/mp3-preview/7855814dd92574eef28a528f529c2bae0c479093?cid=ca6476386dff422191db31cc62d900cf"
-            />
+            <audio ref={audioRef} src={audioPlayer?.audioUrl ?? ''} autoPlay />
             <Box display="flex" alignItems="center">
                 <ImageWrap>
-                    <Image
-                        src="https://i.scdn.co/image/ab67616d0000b2734af5f52f84d67d32efdff7ab"
-                        height="100%"
-                    />
+                    {audioPlayer && (
+                        <Image
+                            src={audioPlayer?.imageUrl ?? ''}
+                            height="100%"
+                        />
+                    )}
                 </ImageWrap>
                 <PlayIconWrap onClick={() => setPlaying(!playing)}>
                     {playing ? <OPauseIcon /> : <OPlayArrowIcon />}
                 </PlayIconWrap>
                 <TrackDetailWrap>
                     <TrackTitle>
-                        <a>Every Time (feat. So Below)</a>
+                        <a>{audioPlayer?.title ?? ''}</a>
                     </TrackTitle>
-                    <ArtistName>Seven Lions & So Below</ArtistName>
+                    <ArtistName>{audioPlayer?.artist}</ArtistName>
                 </TrackDetailWrap>
             </Box>
             <VolumeWrap>
