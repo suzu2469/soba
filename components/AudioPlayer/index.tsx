@@ -1,6 +1,7 @@
 import { createRef, memo, useCallback, useEffect, useState } from 'react'
-import styled from '@emotion/styled'
 import { useRecoilValue } from 'recoil'
+import throttle from 'lodash/throttle'
+import styled from '@emotion/styled'
 import { audioPlayerState } from '../../recoil/audioPlayer'
 
 import Box from '@mui/material/Box'
@@ -17,6 +18,7 @@ const AudioPlayer = memo<Props>(() => {
     const audioRef = createRef<HTMLAudioElement>()
     const [playing, setPlaying] = useState(false)
     const [volume, setVolume] = useState(10)
+    const [seek, setSeek] = useState(0)
     const audioPlayer = useRecoilValue(audioPlayerState)
 
     const volumeChange = useCallback(
@@ -24,6 +26,21 @@ const AudioPlayer = memo<Props>(() => {
             setVolume(value as number)
         },
         [setVolume],
+    )
+
+    const timeUpdate = useCallback(
+        throttle(() => {
+            setSeek(
+                Math.round(
+                    !audioRef.current
+                        ? 0
+                        : (audioRef.current?.currentTime /
+                              audioRef.current?.duration) *
+                              100,
+                ) / 100,
+            )
+        }, 100),
+        [audioRef],
     )
 
     useEffect(() => {
@@ -42,64 +59,68 @@ const AudioPlayer = memo<Props>(() => {
 
     useEffect(() => {
         if (!audioRef.current) return
-        const listner = (_: Event) => {
+        const endListner = (_: Event) => {
             setPlaying(false)
         }
-        audioRef.current.addEventListener('ended', listner)
-        return () => {
-            audioRef.current?.removeEventListener('ended', listner)
-        }
-    })
-
-    useEffect(() => {
-        if (!audioRef.current) return
-        const listner = (_: Event) => {
+        const playListner = (_: Event) => {
             setPlaying(true)
         }
-        audioRef.current.addEventListener('play', listner)
+        audioRef.current.addEventListener('ended', endListner)
+        audioRef.current.addEventListener('play', playListner)
         return () => {
-            audioRef.current?.removeEventListener('play', listner)
+            audioRef.current?.removeEventListener('ended', endListner)
+            audioRef.current?.removeEventListener('play', playListner)
         }
-    })
+    }, [])
 
     return (
         <Wrap>
-            <audio ref={audioRef} src={audioPlayer?.audioUrl ?? ''} autoPlay />
-            <Box display="flex" alignItems="center">
-                <ImageWrap>
-                    {audioPlayer && (
-                        <Image
-                            src={audioPlayer?.imageUrl ?? ''}
-                            height="100%"
-                        />
+            <audio
+                ref={audioRef}
+                src={audioPlayer?.audioUrl ?? ''}
+                autoPlay
+                onTimeUpdate={timeUpdate}
+            />
+            <Box height="64px">
+                <Box display="flex" alignItems="center">
+                    <ImageWrap>
+                        {audioPlayer && (
+                            <Image
+                                src={audioPlayer?.imageUrl ?? ''}
+                                height="100%"
+                            />
+                        )}
+                    </ImageWrap>
+                    <PlayIconWrap onClick={() => setPlaying(!playing)}>
+                        {playing ? <OPauseIcon /> : <OPlayArrowIcon />}
+                    </PlayIconWrap>
+                    <TrackDetailWrap>
+                        <TrackTitle>
+                            <a href={audioPlayer?.spotifyUri ?? ''}>
+                                {audioPlayer?.title ?? ''}
+                            </a>
+                        </TrackTitle>
+                        <ArtistName>{audioPlayer?.artist}</ArtistName>
+                    </TrackDetailWrap>
+                </Box>
+                <VolumeWrap>
+                    {volume === 0 ? (
+                        <VolumeMute />
+                    ) : volume < 50 ? (
+                        <VolumeDown />
+                    ) : (
+                        <VolumeUp />
                     )}
-                </ImageWrap>
-                <PlayIconWrap onClick={() => setPlaying(!playing)}>
-                    {playing ? <OPauseIcon /> : <OPlayArrowIcon />}
-                </PlayIconWrap>
-                <TrackDetailWrap>
-                    <TrackTitle>
-                        <a href={audioPlayer?.spotifyUri ?? ''}>
-                            {audioPlayer?.title ?? ''}
-                        </a>
-                    </TrackTitle>
-                    <ArtistName>{audioPlayer?.artist}</ArtistName>
-                </TrackDetailWrap>
+                    <VolumeSlider
+                        value={volume}
+                        valueLabelDisplay="auto"
+                        onChange={volumeChange}
+                    />
+                </VolumeWrap>
             </Box>
-            <VolumeWrap>
-                {volume === 0 ? (
-                    <VolumeMute />
-                ) : volume < 50 ? (
-                    <VolumeDown />
-                ) : (
-                    <VolumeUp />
-                )}
-                <VolumeSlider
-                    value={volume}
-                    valueLabelDisplay="auto"
-                    onChange={volumeChange}
-                />
-            </VolumeWrap>
+            <Box height="3px">
+                <SeekInner style={{ width: `${seek * 100}%` }} />
+            </Box>
         </Wrap>
     )
 })
@@ -107,11 +128,11 @@ const AudioPlayer = memo<Props>(() => {
 export default AudioPlayer
 
 const Wrap = styled(Box)`
-    display: flex;
+    //display: flex;
     justify-content: space-between;
     position: fixed;
     width: 552px;
-    height: 64px;
+    height: 67px;
     z-index: 10;
     transform: translateX(-50%);
     left: 50%;
@@ -194,4 +215,10 @@ const VolumeSlider = styled(Slider)`
         background-color: black;
         color: white;
     }
+`
+
+const SeekInner = styled.div`
+    height: 100%;
+    background-color: white;
+    content: '';
 `
