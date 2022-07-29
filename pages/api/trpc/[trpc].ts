@@ -23,9 +23,7 @@ const createContext = async ({
     const redis = createClient({
         url: `redis://${process.env.REDIS_HOST}:${process.env.REDIS_PORT}`,
     })
-
     redis.on('error', (err) => console.error(err))
-    await redis.connect()
 
     return {
         accessToken: null,
@@ -270,6 +268,7 @@ export const appRouter = trpc
                 .replace(/\//g, '_')
                 .replace(/=/g, '')
 
+            await ctx.redis.connect()
             await ctx.redis.set(
                 sessionId,
                 JSON.stringify({ state, verifier } as SessionData),
@@ -277,6 +276,7 @@ export const appRouter = trpc
                     EX: 300,
                 },
             )
+            ctx.redis.disconnect()
 
             ctx.res.setHeader(
                 'Set-Cookie',
@@ -312,8 +312,10 @@ export const appRouter = trpc
                 })
             }
 
+            await ctx.redis.connect()
             await ctx.redis.select(0)
             const sessionDataStr = await ctx.redis.get(sessionId)
+            ctx.redis.disconnect()
 
             if (!sessionDataStr) {
                 throw new trpc.TRPCError({
@@ -367,7 +369,9 @@ export const appRouter = trpc
                     cause: e,
                 })
             } finally {
+                await ctx.redis.connect()
                 await ctx.redis.del(sessionId)
+                ctx.redis.disconnect()
             }
 
             ctx.res.setHeader('Set-Cookie', [
