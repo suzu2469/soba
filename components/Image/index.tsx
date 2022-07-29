@@ -12,7 +12,7 @@ const Image: React.FC<Props> = (props) => {
             width={props.width}
             height={props.height}
         >
-            <InnerImg {...props}></InnerImg>
+            <InnerImg {...props} loading="lazy"></InnerImg>
         </Outer>
     )
 }

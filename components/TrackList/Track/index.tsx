@@ -4,10 +4,13 @@ import Box from '@mui/material/Box'
 import Image from '../../../components/Image'
 
 type Props = {
-    image?: string
-    artist?: string
-    title?: string
-    bpm?: number
+    id: string
+    image: string
+    artist: string
+    title: string
+    bpm: number
+    url: string
+    onClickImage?: (id: string) => void
     className?: string
 }
 const Track: React.FC<Props> = (props) => {
@@ -20,14 +23,21 @@ const Track: React.FC<Props> = (props) => {
             height="48px"
         >
             <Box display="flex" alignItems="center">
-                <Image width="48px" src={props.image} alt="" />
+                <Box
+                    onClick={() => props.onClickImage(props.id)}
+                    position="relative"
+                >
+                    <Image width="48px" src={props.image} alt="" />
+                </Box>
                 <Box
                     display="flex"
                     marginLeft="24px"
                     justifyContent="center"
                     flexDirection="column"
                 >
-                    <TrackTitle>{props.title}</TrackTitle>
+                    <TrackTitle>
+                        <a href={props.url}>{props.title}</a>
+                    </TrackTitle>
                     <TrackArtist>{props.artist}</TrackArtist>
                 </Box>
             </Box>
@@ -43,6 +53,10 @@ const Track: React.FC<Props> = (props) => {
 const TrackTitle = styled.p`
     font-size: 18px;
     font-weight: bold;
+
+    & > a:hover {
+        text-decoration: underline;
+    }
 `
 
 const TrackArtist = styled.p`
@@ -51,7 +65,7 @@ const TrackArtist = styled.p`
 `
 
 const TrackBPM = styled.p`
-    font-family: 'Josefin sans';
+    font-family: 'Josefin sans', sans-serif;
     font-size: 32px;
     font-weight: bold;
 `
