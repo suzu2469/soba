@@ -14,7 +14,7 @@ type Props = {}
 const AudioPlayer = memo<Props>(() => {
     const audioRef = createRef<HTMLAudioElement>()
     const [playing, setPlaying] = useState(false)
-    const [volume, setVolume] = useState(20)
+    const [volume, setVolume] = useState(10)
     const audioPlayer = useRecoilValue(audioPlayerState)
 
     const volumeChange = useCallback(
@@ -49,6 +49,17 @@ const AudioPlayer = memo<Props>(() => {
         }
     })
 
+    useEffect(() => {
+        if (!audioRef.current) return
+        const listner = (_: Event) => {
+            setPlaying(true)
+        }
+        audioRef.current.addEventListener('play', listner)
+        return () => {
+            audioRef.current?.removeEventListener('play', listner)
+        }
+    })
+
     return (
         <Wrap>
             <audio ref={audioRef} src={audioPlayer?.audioUrl ?? ''} autoPlay />
@@ -66,7 +77,9 @@ const AudioPlayer = memo<Props>(() => {
                 </PlayIconWrap>
                 <TrackDetailWrap>
                     <TrackTitle>
-                        <a>{audioPlayer?.title ?? ''}</a>
+                        <a href={audioPlayer?.spotifyUri ?? ''}>
+                            {audioPlayer?.title ?? ''}
+                        </a>
                     </TrackTitle>
                     <ArtistName>{audioPlayer?.artist}</ArtistName>
                 </TrackDetailWrap>

@@ -26,6 +26,7 @@ const TrackList: React.FC<Props> = (props) => {
                 artist: item.artist,
                 imageUrl: item.image,
                 audioUrl: item.preview,
+                spotifyUri: item.url,
             })
         },
         [items],

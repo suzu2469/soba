@@ -5,6 +5,7 @@ type AudioPlayerState = {
     imageUrl: string
     artist: string
     title: string
+    spotifyUri: string
 }
 export const audioPlayerState = atom<AudioPlayerState | null>({
     key: 'AudioPlayer',
