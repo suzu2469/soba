@@ -10,7 +10,7 @@ type Props = {
     title: string
     bpm: number
     url: string
-    onClickImage?: (id: string) => void
+    onClickImage: (id: string) => void
     className?: string
 }
 const Track: React.FC<Props> = (props) => {

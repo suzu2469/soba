@@ -3,15 +3,8 @@ import { trpc } from '../../utils/trpc'
 
 import Track from './Track'
 
-type Track = {
-    id: string
-    title: string
-    image: string
-    artist: string
-    bpm: number
-}
 type Props = {
-    tracks: Track[]
+    tracks: any[]
     className?: string
 }
 const TrackList: React.FC<Props> = (props) => {
@@ -20,10 +13,13 @@ const TrackList: React.FC<Props> = (props) => {
             {props.tracks.map((item) => (
                 <TrackItem
                     key={item.id}
+                    id={item.id}
+                    url={item.url}
                     title={item.title}
                     image={item.image}
                     artist={item.artist}
                     bpm={item.bpm}
+                    onClickImage={() => {}}
                 />
             ))}
         </div>
