@@ -77,7 +77,7 @@ const getUsersSavedTracks = async (
                 offset: cursor - 1,
             } as SpotifyGetUsersSavedTracksRequest,
         })
-    } catch (e) {
+    } catch (e: any) {
         logger.error('Spotify request failed', {
             error: e?.toString() ?? '',
         })
@@ -106,7 +106,7 @@ const getUsersSavedTracks = async (
                 }),
                 {},
             ) ?? {}
-    } catch (e) {
+    } catch (e: any) {
         logger.error('Spotify request failed', {
             error: e?.toString() ?? '',
         })
@@ -375,8 +375,10 @@ export const appRouter = trpc
                         },
                     },
                 )
-            } catch (e) {
-                logger.error({ error: e })
+            } catch (e: any) {
+                logger.error('Spotify request failed', {
+                    error: e?.toString() ?? '',
+                })
                 throw new trpc.TRPCError({
                     code: 'INTERNAL_SERVER_ERROR',
                     message: 'Request faield to Spotify',
