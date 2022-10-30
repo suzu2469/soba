@@ -78,7 +78,9 @@ const getUsersSavedTracks = async (
             } as SpotifyGetUsersSavedTracksRequest,
         })
     } catch (e) {
-        logger.error({ e })
+        logger.error('Spotify request failed', {
+            error: e?.toString() ?? '',
+        })
         throw new trpc.TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
             message: 'Spotify request failed',
@@ -105,7 +107,9 @@ const getUsersSavedTracks = async (
                 {},
             ) ?? {}
     } catch (e) {
-        logger.error({ error: e })
+        logger.error('Spotify request failed', {
+            error: e?.toString() ?? '',
+        })
         throw new trpc.TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
             message: 'Spotify request failed',
@@ -173,7 +177,6 @@ const protectedRouter = trpc
                     },
                 )
             } catch (e) {
-                logger.error({ error: e })
                 ctx.res.setHeader(
                     'Set-Cookie',
                     `${refreshTokenCookieKey}=deleted; Path=/; Expires=${new Date().toUTCString()}`,
@@ -245,13 +248,10 @@ const protectedRouter = trpc
                         input.bpmStart <= item.bpm && item.bpm <= input.bpmEnd,
                 )
 
-            logger.info({
-                type: 'access_log',
-                data: {
-                    bpmStart: input.bpmStart,
-                    bpmEnd: input.bpmEnd,
-                    result,
-                },
+            logger.info('Search with bpm', {
+                bpmStart: input.bpmStart,
+                bpmEnd: input.bpmEnd,
+                result: JSON.stringify(result),
             })
 
             return result
