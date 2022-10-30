@@ -3031,7 +3031,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"pino@npm:^8.7.0":
+"pino@npm:8.7.0":
   version: 8.7.0
   resolution: "pino@npm:8.7.0"
   dependencies:
@@ -3483,7 +3483,7 @@ __metadata:
     eslint-config-next: 12.2.3
     lodash: ^4.17.21
     next: 12.2.3
-    pino: ^8.7.0
+    pino: 8.7.0
     prettier: ^2.7.1
     query-string: ^7.1.1
     react: 18.2.0

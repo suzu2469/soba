@@ -5,6 +5,7 @@ import { RecoilRoot } from 'recoil'
 import { AppRouter } from './api/trpc/[trpc]'
 import { theme } from '../styles/theme'
 import ErrorBoundary from '../components/ErrorBoundary'
+import logger from '../utils/logger'
 
 import '../styles/reset.css'
 import '../styles/globals.css'
