@@ -6,6 +6,7 @@ import queryString from 'query-string'
 import * as crypto from 'crypto'
 import axios, { AxiosResponse } from 'axios'
 import { z } from 'zod'
+import logger from '../../../utils/logger'
 
 import addSeconds from 'date-fns/addSeconds'
 import formatRFC7231 from 'date-fns/formatRFC7231'
@@ -23,7 +24,7 @@ const createContext = async ({
     const redis = createClient({
         url: `redis://${process.env.REDIS_HOST}:${process.env.REDIS_PORT}`,
     })
-    redis.on('error', (err) => console.error(err))
+    redis.on('error', (err) => logger.error(err))
 
     return {
         accessToken: null,
@@ -77,7 +78,7 @@ const getUsersSavedTracks = async (
             } as SpotifyGetUsersSavedTracksRequest,
         })
     } catch (e) {
-        console.error({ e })
+        logger.error({ e })
         throw new trpc.TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
             message: 'Spotify request failed',
@@ -104,7 +105,7 @@ const getUsersSavedTracks = async (
                 {},
             ) ?? {}
     } catch (e) {
-        console.error({ e })
+        logger.error({ error: e })
         throw new trpc.TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
             message: 'Spotify request failed',
@@ -138,6 +139,7 @@ const protectedRouter = trpc
         if (!accessToken) {
             const refreshToken = ctx.req.cookies[refreshTokenCookieKey]
             if (!refreshToken) {
+                logger.error(new Error('Unauthorized'))
                 throw new trpc.TRPCError({
                     code: 'UNAUTHORIZED',
                     message: 'AccessToken is not found',
@@ -171,7 +173,7 @@ const protectedRouter = trpc
                     },
                 )
             } catch (e) {
-                console.error(e)
+                logger.error({ error: e })
                 ctx.res.setHeader(
                     'Set-Cookie',
                     `${refreshTokenCookieKey}=deleted; Path=/; Expires=${new Date().toUTCString()}`,
@@ -236,12 +238,23 @@ const protectedRouter = trpc
                 ),
             )
 
-            return requests
+            const result = requests
                 .flatMap((res) => res.items)
                 .filter(
                     (item) =>
                         input.bpmStart <= item.bpm && item.bpm <= input.bpmEnd,
                 )
+
+            logger.info({
+                type: 'access_log',
+                data: {
+                    bpmStart: input.bpmStart,
+                    bpmEnd: input.bpmEnd,
+                    result,
+                },
+            })
+
+            return result
         },
     })
 
@@ -363,6 +376,7 @@ export const appRouter = trpc
                     },
                 )
             } catch (e) {
+                logger.error({ error: e })
                 throw new trpc.TRPCError({
                     code: 'INTERNAL_SERVER_ERROR',
                     message: 'Request faield to Spotify',
